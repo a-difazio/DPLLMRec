@@ -1,7 +1,6 @@
 import torch
 
 
-# sto avendo un attimo difficoltà a capire, controllare le dimensioni, devo ottenere uno scalare ovviamente alla fine
 def distance(z, z_public):
     """
     Compute the distance between two distributions

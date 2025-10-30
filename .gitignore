@@ -1,4 +1,4 @@
 .env
-.venv
-.idea
+.venv/*
+.idea/*
 /synthetic.txt
