@@ -60,8 +60,6 @@ class TextGenerator:
         return encoded
 
     def generate(self, batch, args, batch_idx, total_batches):
-        #TODO: mi sa che c'è un errore, il conteggio dei token privati deve essere considerato solo se faccio selezione privata.
-        # quella soglia mi serve
 
         encoded_private_prompts = self._prepare_batch(batch)
         input_ids_private = encoded_private_prompts["input_ids"].to(self.model.device)
