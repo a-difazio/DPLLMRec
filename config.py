@@ -6,7 +6,7 @@ def get_config():
 
     parser.add_argument("--model_name", type=str, default="google/gemma-3-1b-it")
     parser.add_argument("--batch_size", type=int, default=3)
-    parser.add_argument("--max_token", type=int, default=50)
+    parser.add_argument("--max_private_token", type=int, default=50)
     parser.add_argument("--tau_private", type=float, default=1.0)
     parser.add_argument("--tau_public", type=float, default=1.0)
     parser.add_argument("--epsilon", type=float, default=1.0)

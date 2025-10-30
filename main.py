@@ -21,7 +21,7 @@ if __name__ == '__main__':
     print(f"Input file: {args.input_file}")
     print(f"Output file: {args.output_file}")
     print(f"Batch size: {args.batch_size}")
-    print(f"Max tokens for generation: {args.max_token}")
+    print(f"Max tokens for generation: {args.max_private_token}")
 
     try:
         generate_synthetic_data(args)

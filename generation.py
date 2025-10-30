@@ -60,6 +60,8 @@ class TextGenerator:
         return encoded
 
     def generate(self, batch, args, batch_idx, total_batches):
+        #TODO: mi sa che c'è un errore, il conteggio dei token privati deve essere considerato solo se faccio selezione privata.
+        # quella soglia mi serve
 
         encoded_private_prompts = self._prepare_batch(batch)
         input_ids_private = encoded_private_prompts["input_ids"].to(self.model.device)
@@ -77,7 +79,11 @@ class TextGenerator:
         noisy_threshold = args.theta + torch.tensor(laplace(0, args.epsilon),
                                                     device=self.model.device, dtype=self.model.dtype)
 
-        for t in tqdm(range(args.max_token), desc=f"Batch {batch_idx + 1}/{total_batches} - Generating tokens"):
+        t = 0
+
+        # for t in tqdm(range(args.max_token), desc=f"Batch {batch_idx + 1}/{total_batches} - Generating tokens"):
+        pbar = tqdm(total=args.max_private_token, desc=f"Batch {batch_idx + 1}/{total_batches} - Generating tokens")
+        while t < args.max_private_token:
 
             with torch.no_grad():
                 generation_output_private = self.model.generate(
@@ -115,6 +121,8 @@ class TextGenerator:
 
                 noisy_threshold = args.theta + torch.tensor(laplace(0, args.epsilon),
                                                             device=self.model.device, dtype=self.model.dtype)
+                t += 1
+                pbar.update(1)
 
             else:
                 probs = torch.softmax(logits_public / args.tau_public, dim=-1)
