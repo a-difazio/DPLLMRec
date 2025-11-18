@@ -2,9 +2,9 @@
 
 set -e
 
-DATASET="Beauty"
+DATASET="ml-1m"
 TRAIN_DIR="default"
-DEVICE="mps"
+DEVICE="cuda"
 MAXLEN=200
 HIDDEN_UNITS=50
 NUM_BLOCKS=2
