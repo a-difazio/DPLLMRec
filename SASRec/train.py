@@ -2,6 +2,9 @@ import os
 import time
 import wandb
 import argparse
+import random
+import numpy as np
+import torch
 
 from model import SASRec
 from utils import *
@@ -45,6 +48,16 @@ def setup_experiment(args):
         },
     )
 
+    # random seed
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    print(f"Global seed set to {args.seed}")
+
     return output_path, run, log
 
 
@@ -54,6 +67,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', required=True)
     parser.add_argument('--train_dir', required=True)
+    parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--batch_size', default=128, type=int)
     parser.add_argument('--lr', default=0.001, type=float)
     parser.add_argument('--maxlen', default=200, type=int)

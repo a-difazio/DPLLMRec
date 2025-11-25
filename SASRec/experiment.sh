@@ -4,6 +4,7 @@ set -e
 
 DATASET="ml-1m"
 TRAIN_DIR="default"
+SEED=42
 DEVICE="cuda"
 MAXLEN=200
 HIDDEN_UNITS=50
@@ -17,6 +18,7 @@ echo "Starting Experiment 1"
 python train.py \
     --dataset $DATASET \
     --train_dir ${TRAIN_DIR} \
+    --seed $SEED \
     --lr 0.001 \
     --batch_size 128 \
     --maxlen $MAXLEN \
