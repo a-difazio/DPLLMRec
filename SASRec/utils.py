@@ -11,7 +11,7 @@ from multiprocessing import Process, Queue
 def sample_function(user_train, usernum, itemnum, batch_size, maxlen, result_queue, SEED):
     """
     Negative sampling.
-    NB: also this function can be modify if we need to change the training of the model.
+    NB: also this function can be modified if we need to change the training of the model.
     """
 
     # sampler for batch generation
