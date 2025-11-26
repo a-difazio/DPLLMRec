@@ -138,6 +138,9 @@ def data_partition(fname):
 def evaluate(model, dataset, args):
     [train, valid, test, usernum, itemnum] = copy.deepcopy(dataset)
 
+    random.seed(42)
+    np.random.seed(42)
+
     NDCG = 0.0
     HT = 0.0
     valid_user = 0.0
@@ -186,6 +189,9 @@ def evaluate(model, dataset, args):
 # evaluate on val set
 def evaluate_valid(model, dataset, args):
     [train, valid, test, usernum, itemnum] = copy.deepcopy(dataset)
+
+    random.seed(42)
+    np.random.seed(42)
 
     NDCG = 0.0
     valid_user = 0.0
