@@ -186,7 +186,7 @@ def evaluate_model(model, dataset, args, mode):
         if len(test[u]) > 0:
             rated.add(test[u][0])
 
-        item_idx = target_item
+        item_idx = [target_item]
 
         for _ in range(100):
             t = np.random.randint(1, itemnum + 1)
