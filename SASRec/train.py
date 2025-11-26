@@ -30,6 +30,7 @@ def setup_experiment(args):
     run = wandb.init(
         entity="angela-politecnico-di-bari",
         project="SASRec",
+        name=args.train_dir,
         config={
             "learning_rate": args.lr,
             "architecture": "SASRec_Transformer",
@@ -47,6 +48,9 @@ def setup_experiment(args):
             "eval_interval": args.eval_interval,
         },
     )
+
+    # save args.txt on wandb
+    run.save(os.path.join(output_path, 'args.txt'))
 
     # random seed
     random.seed(args.seed)
@@ -212,6 +216,7 @@ if __name__ == '__main__':
             fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             model_path = os.path.join(output_path, fname)
             torch.save(model.state_dict(), model_path)
+            run.save(os.path.join(output_path, 'log.txt'))
             run.save(model_path)
             print(f"Final model saved to {model_path} and uploaded to W&B.")
     

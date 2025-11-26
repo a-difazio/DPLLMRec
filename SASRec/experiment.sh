@@ -2,8 +2,9 @@
 
 set -e
 
+TRAIN_DIR=${1:default}
+
 DATASET="ml-1m"
-TRAIN_DIR="default"
 SEED=42
 DEVICE="cuda"
 MAXLEN=200
@@ -14,7 +15,8 @@ DROPOUT_RATE=0.2
 L2_EMB=0.0
 EVAL_INTERVAL=20
 
-echo "Starting Experiment 1"
+echo "Starting Experiment 1\n"
+
 python train.py \
     --dataset $DATASET \
     --train_dir ${TRAIN_DIR} \
@@ -31,4 +33,4 @@ python train.py \
     --num_epochs 100 \
     --eval_interval $EVAL_INTERVAL
 
-echo "Experiment 1 Finished."
+echo "Experiment 1 Finished.\n"
