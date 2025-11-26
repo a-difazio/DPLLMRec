@@ -15,7 +15,7 @@ DROPOUT_RATE=0.2
 L2_EMB=0.0
 EVAL_INTERVAL=20
 
-echo "Starting Experiment 1\n"
+echo "Starting Experiment 1"
 
 python train.py \
     --dataset $DATASET \
@@ -33,4 +33,4 @@ python train.py \
     --num_epochs 100 \
     --eval_interval $EVAL_INTERVAL
 
-echo "Experiment 1 Finished.\n"
+echo "Experiment 1 Finished."
