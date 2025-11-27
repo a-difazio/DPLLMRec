@@ -66,7 +66,6 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
 
-    temperature = 1
     items_indices = np.array(range(1, itemnum+1))
 
     output_path = os.path.join(args.dataset_dir, 'generated.txt')
@@ -77,9 +76,9 @@ if __name__ == '__main__':
     print(f'Saving result in: {output_path}')
 
     with torch.no_grad():
-        for user, seq in user_train.items():
-            if user == 4:
-                break
+        for user, seq in tqdm(user_train.items()):
+            #if user == 4:
+                #break
 
             prompt = seq[:]
             prompt_len = len(prompt)
