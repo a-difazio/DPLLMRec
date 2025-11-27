@@ -22,7 +22,7 @@ def setup_generation(args):
     model_path = os.path.join(args.dataset_dir, args.model_file)
 
     if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Model file not found: {model_path}")
+        raise FileNotFoundError(f"Model file not found: {model_path}.")
 
     args_dict = {}
     with open(args_path, 'r') as f:
@@ -77,7 +77,9 @@ if __name__ == '__main__':
     print(f'Saving result in: {output_path}')
 
     with torch.no_grad():
-        for user, seq in tqdm(user_train.items()):
+        for user, seq in user_train.items():
+            if user == 4:
+                break
 
             prompt = seq[:]
             prompt_len = len(prompt)
@@ -90,22 +92,28 @@ if __name__ == '__main__':
                 cut = prompt[-args.maxlen:]
                 seq_input[-len(cut):] = cut
 
-                # predict (output dimension [num_items])
+                # predict (output dimension [1, num_items])
                 logits = model.predict(np.array([user]), np.array([seq_input]), items_indices)
-
-                # anti-repetition penalties
-
-                for item in set(generated_sequence):
-                    logits[item] *= args.penalty
+                logits = logits[0]
 
                 # sample
                 probs = torch.softmax(logits / args.temperature, dim=-1)
+
+                # anti-repetition penalty
+                for item in set(generated_sequence):
+                    probs[item - 1] *= args.penalty
+
+                probs = probs / probs.sum()
+
                 next_item_idx = torch.multinomial(probs, num_samples=1).item()
                 next_item = items_indices[next_item_idx].item()
 
                 generated_sequence.append(next_item)
                 prompt.append(next_item)
                 output.write(f'{user}, {next_item}\n')
+
+            print(f'Original {seq}')
+            print(f'Generated {generated_sequence}')
 
     output.close()
     print(f'Generation completed.')

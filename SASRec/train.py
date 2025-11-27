@@ -219,7 +219,7 @@ if __name__ == '__main__':
             run.save(os.path.join(output_path, 'log.txt'))
             run.save(model_path)
             print(f"Final model saved to {model_path} and uploaded to W&B.")
-    
+
     log.close()
     sampler.close()
     run.finish()
