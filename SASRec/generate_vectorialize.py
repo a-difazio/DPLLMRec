@@ -99,7 +99,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_file', required=True)
     parser.add_argument('--temperature', type=float, default=1.0)
     parser.add_argument('--penalty', type=float, default=0.1)
-    parser.add_argument('--device', default='mps')
+    parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--gen_batch', type=int, default=128)
     args = parser.parse_args()
@@ -128,8 +128,6 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         for user, seq in tqdm(user_train.items()):
-            #if user == 4:
-                #break
 
             prompt = seq[:]
             prompt_len = len(prompt)
@@ -161,9 +159,6 @@ if __name__ == '__main__':
                 generated_sequence.append(next_item)
                 prompt.append(next_item)
                 output.write(f'{user}, {next_item}\n')
-
-            print(f'Original {seq}')
-            print(f'Generated {generated_sequence}')
 
     run.finish()
     output.close()

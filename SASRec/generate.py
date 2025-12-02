@@ -1,5 +1,6 @@
 import os
 import argparse
+from collections import Counter
 from tqdm import tqdm
 from model import SASRec
 from utils import *
@@ -42,13 +43,45 @@ def setup_generation(args):
     return args, model_path
 
 
+def top_p(probs, p):
+    # take elements that sums to p
+
+    sorted_probs, sorted_idx = torch.sort(probs, descending=True)
+    cum = torch.cumsum(sorted_probs, dim=-1)
+
+    mask = cum <= p
+
+    mask[mask.sum()] = True
+
+    filtered = torch.zeros_like(probs)
+    filtered[sorted_idx[mask]] = probs[sorted_idx[mask]]
+
+    filtered = filtered / filtered.sum()
+
+    return filtered
+
+
+def top_k(probs, k):
+    # take top k elements
+    topk_vals, topk_idx = torch.topk(probs, k)
+
+    filtered = torch.zeros_like(probs)
+    filtered[topk_idx] = topk_vals
+
+    filtered = filtered / filtered.sum()
+
+    return filtered
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_dir', default='ml-1m_original')
     parser.add_argument('--model_file', required=True)
-    parser.add_argument('--temperature', type=float, default=1.0)
-    parser.add_argument('--penalty', type=float, default=0.1)
+    parser.add_argument('--temperature', type=float, default=1.2)
+    parser.add_argument('--penalty', type=float, default=0.95)
+    parser.add_argument('--topp', type=float, default=0.9)
+    parser.add_argument('--topk', type=float, default=50)
     parser.add_argument('--device', default='mps')
     parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
@@ -77,14 +110,16 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         for user, seq in tqdm(user_train.items()):
+            print(f"User {user}\n")
             #if user == 4:
                 #break
 
             prompt = seq[:]
             prompt_len = len(prompt)
             generated_sequence = []
+            gen_len = min(prompt_len, args.maxlen)
 
-            for _ in range(prompt_len):
+            for _ in range(gen_len):
 
                 # padding
                 seq_input = np.zeros([args.maxlen], dtype=np.int32)
@@ -99,10 +134,21 @@ if __name__ == '__main__':
                 probs = torch.softmax(logits / args.temperature, dim=-1)
 
                 # anti-repetition penalty
-                for item in set(generated_sequence):
-                    probs[item - 1] *= args.penalty
+                for item, count in Counter(generated_sequence).items():
+                    probs[item - 1] *= (args.penalty ** count)
 
                 probs = probs / probs.sum()
+
+
+                entropy = -torch.sum(probs * torch.log(probs + 1e-9), dim=-1)
+                print("\nentropy: ", entropy.mean().item())
+
+                pmax, idx = probs.max(dim=-1)
+                print("max:", pmax.item(), "item:", idx.item())
+
+                top_vals, top_idx = torch.topk(probs, k=10, dim=-1)
+                for i in range(10):
+                    print(f"{i + 1}: item={top_idx[i].item()}  p={top_vals[i].item():.4f}")
 
                 next_item_idx = torch.multinomial(probs, num_samples=1).item()
                 next_item = items_indices[next_item_idx].item()
