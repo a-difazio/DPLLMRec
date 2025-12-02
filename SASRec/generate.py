@@ -104,7 +104,7 @@ if __name__ == '__main__':
     output_path = os.path.join(args.dataset_dir, 'generated.txt')
 
     output = open(output_path, 'w')
-    output.write(f'user, item\n')
+    output.write(f'user,item\n')
     print(f'Starting generation.')
     print(f'Saving result in: {output_path}')
 
@@ -155,7 +155,7 @@ if __name__ == '__main__':
 
                 generated_sequence.append(next_item)
                 prompt.append(next_item)
-                output.write(f'{user}, {next_item}\n')
+                output.write(f'{user},{next_item}\n')
 
             print(f'Original {seq}')
             print(f'Generated {generated_sequence}')
