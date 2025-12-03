@@ -104,7 +104,7 @@ if __name__ == '__main__':
     output_path = os.path.join(args.dataset_dir, 'generated.txt')
 
     output = open(output_path, 'w')
-    output.write(f'user,item\n')
+
     print(f'Starting generation.')
     print(f'Saving result in: {output_path}')
 
