@@ -134,8 +134,12 @@ if __name__ == '__main__':
                 probs = torch.softmax(logits / args.temperature, dim=-1)
 
                 # anti-repetition penalty
-                for item, count in Counter(generated_sequence).items():
-                    probs[item - 1] *= (args.penalty ** count)
+                #for item, count in Counter(generated_sequence).items():
+                    #probs[item - 1] *= (args.penalty ** count)
+
+                # no repetition
+                for item in generated_sequence:
+                    probs[item - 1] = 0
 
                 probs = probs / probs.sum()
 
