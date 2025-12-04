@@ -111,7 +111,7 @@ if __name__ == '__main__':
     print(f'Saving result in: {output_path}')
 
     with torch.no_grad():
-        for user, seq in tqdm(list(user_train.items())[:30]):
+        for user, seq in tqdm(list(user_train.items())):
             print(f"User {user}\n")
             #if user == 4:
                 #break
