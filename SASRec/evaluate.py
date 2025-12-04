@@ -244,7 +244,39 @@ rep_rate_gen = len(repeats) / len(generated_copy)
 n_rep_gen = len(repeats)
 log(f"Generated: {rep_rate_gen:.4%} ({n_rep_gen} repetition)")
 
-# Short Loops
+# TODO: Short Loops
+
+# Transition
+print(f"\n--- Transition Analysis ---\n")
+
+
+def get_top_transitions(df, top_k=20):
+    transitions = df.dropna(subset=['prev_item']).copy()
+
+    transitions['pair'] = transitions['prev_item'].astype(str) + " -> " + transitions['item'].astype(int).astype(str)
+
+    counts = transitions['pair'].value_counts(normalize=True)
+    return counts, set(counts.head(top_k).index)
+
+
+trans_orig_dist, top_k_orig = get_top_transitions(original_copy, top_k=100)
+trans_gen_dist, top_k_gen = get_top_transitions(generated_copy, top_k=100)
+
+# Jaccard Similarity
+intersection = len(top_k_orig.intersection(top_k_gen))
+union = len(top_k_orig.union(top_k_gen))
+jaccard = intersection / union if union > 0 else 0
+
+
+print(f"Overlap on Top-50 bigrams: {intersection}/50 transition are the same.")
+print(f"Jaccard Similarity (Top-50): {jaccard:.4f}")
+
+print("\nTop 5 real transition:")
+print(trans_orig_dist.head(5))
+print("\nTop 5 generated transition:")
+print(trans_gen_dist.head(5))
+
+log_file.close()
 
 
 
