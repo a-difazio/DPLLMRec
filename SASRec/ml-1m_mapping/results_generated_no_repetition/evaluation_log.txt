@@ -1,0 +1,61 @@
+Original: data/ml-1m.txt
+Generated: ml-1m_mapping/generated_no_repetition.txt
+
+--- Basic statistics ---
+
+Original
+Dataset length: 988129
+Number of users: 6040
+Number of items: 3704
+
+Generated
+Dataset length: 652098
+Number of users: 6040
+Number of items: 3601
+
+--- Item Coverage ---
+
+Coverage: 0.9719
+
+--- Top 20 most frequent items ---
+
+Original: [63, 79, 12, 55, 135, 130, 17, 2, 131, 66, 186, 54, 14, 74, 29, 124, 38, 42, 128, 268, 25, 164, 200, 553, 61, 126, 237, 271, 47, 216, 214, 132, 133, 96, 742, 88, 565, 272, 290, 10, 259, 155, 740, 744, 35, 221, 13, 210, 48, 431]
+Generated: [3316, 2453, 437, 2066, 1644, 425, 121, 1241, 868, 2575, 96, 1022, 428, 531, 836, 2008, 3310, 1152, 524, 2785, 1239, 3575, 1887, 1643, 2522, 1960, 3144, 1883, 810, 522, 3057, 757, 179, 1925, 7, 2039, 515, 2603, 888, 518, 1236, 953, 2340, 3379, 3298, 2350, 2447, 1490, 528, 1150]
+
+--- Distribution ---
+
+KL Divergence (Original || Generated): 0.9347
+Spearman rank correlation: 0.4712
+Kendall tau correlation: 0.3337
+
+--- Length Distribution ---
+
+4479/6040 users (74.16%) have the same session length as in the original dataset.
+
+--- Repetition ---
+
+Original: 0.0000% (0 repetition)
+Generated: 0.0000% (0 repetition)
+
+--- Transition Analysis ---
+
+Overlap on Top-50 bigrams: 2/50 transition are the same.
+Jaccard Similarity (Top-50): 0.0101
+
+Top 5 real transition:
+pair
+12.0 -> 79      0.000616
+79.0 -> 54      0.000438
+223.0 -> 442    0.000288
+63.0 -> 221     0.000256
+252.0 -> 124    0.000228
+Name: proportion, dtype: float64
+
+Top 5 generated transition:
+pair
+3575.0 -> 3298    0.000294
+1396.0 -> 2292    0.000288
+3379.0 -> 396     0.000274
+745.0 -> 637      0.000268
+179.0 -> 1197     0.000257
+Name: proportion, dtype: float64
