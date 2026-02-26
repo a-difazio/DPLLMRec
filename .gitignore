@@ -2,8 +2,3 @@
 .venv
 .idea
 __pycache__
-bak
-/synthetic.txt
-SASRec/*/
-prompt.txt
-/ml-1m
