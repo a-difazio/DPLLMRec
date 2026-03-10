@@ -1,0 +1,19 @@
+{
+    "dataset": "ml-1m",
+    "run_name": "run1",
+    "seed": 42,
+    "batch_size": 128,
+    "lr": 0.001,
+    "maxlen": 200,
+    "hidden_units": 50,
+    "num_blocks": 2,
+    "num_epochs": 1000,
+    "num_heads": 1,
+    "dropout_rate": 0.2,
+    "l2_emb": 0.0,
+    "device": "mps",
+    "checkpoint": null,
+    "norm_first": false,
+    "eval_interval": 10,
+    "patience": 5
+}
