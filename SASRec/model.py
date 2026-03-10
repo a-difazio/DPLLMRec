@@ -61,16 +61,20 @@ class SASRec(torch.nn.Module):
 
     def log2feats(self, log_seqs):  # TODO: fp64 and int64 as default in python, trim?
         # item embeddings
-        seqs = self.item_emb(torch.LongTensor(log_seqs).to(self.dev))
+        # seqs = self.item_emb(torch.LongTensor(log_seqs).to(self.dev))
+        seqs = self.item_emb(log_seqs)
         seqs *= self.item_emb.embedding_dim ** 0.5
 
         # positional embedding
-        poss = np.tile(np.arange(1, log_seqs.shape[1] + 1), [log_seqs.shape[0], 1])
+        # poss = np.tile(np.arange(1, log_seqs.shape[1] + 1), [log_seqs.shape[0], 1])
         # TODO: directly do tensor = torch.arange(1, xxx, device='cuda') to save extra overheads
+        batch_size, seq_len = log_seqs.shape
+        poss = torch.arange(1, seq_len + 1, device=self.dev).unsqueeze(0).repeat(batch_size, 1)
         poss *= (log_seqs != 0)
 
         # combine
-        seqs += self.pos_emb(torch.LongTensor(poss).to(self.dev))
+        #seqs += self.pos_emb(torch.LongTensor(poss).to(self.dev))
+        seqs += self.pos_emb(poss)
         seqs = self.emb_dropout(seqs)
 
         # attention mask
@@ -104,6 +108,27 @@ class SASRec(torch.nn.Module):
 
         return log_feats
 
+
+    def forward(self, user_ids, log_seqs):
+        # se volessi aggiungere l'embedding utente
+        # user_emb = self.user_emb(user_ids)  # (B, C)
+        # user_emb = user_emb.unsqueeze(1)    # (B, 1, C)
+        # log_feats = log_feats + user_emb    # broadcasting su T
+
+        log_feats = self.log2feats(log_seqs)
+        logits = log_feats @ self.item_emb.weight.T
+
+        return logits
+
+    def predict(self, user_ids, log_seqs):
+
+        log_feats = self.log2feats(log_seqs)
+        final_feat = log_feats[:, -1, :]
+        logits = final_feat @ self.item_emb.weight.T
+
+        return logits
+
+"""
     def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs):
         # for training, sequence, positive items, negative items
         # (batch_size, maxlen, hidden_units), contextual representation (features)
@@ -123,7 +148,9 @@ class SASRec(torch.nn.Module):
         # neg_pred = self.neg_sigmoid(neg_logits)
 
         return pos_logits, neg_logits  # pos_pred, neg_pred
+"""
 
+"""
     def predict(self, user_ids, log_seqs, item_indices):
         # for inference, sequence, sequence of candidates items ID
         # (batch_size, maxlen, hidden_units), contextual representation (features)
@@ -145,3 +172,5 @@ class SASRec(torch.nn.Module):
         # preds = self.pos_sigmoid(logits) # rank same item list for different users
 
         return logits  # preds # (U, I)
+        
+"""

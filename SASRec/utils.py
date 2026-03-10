@@ -1,219 +1,152 @@
 import sys
 import copy
-import torch
 import random
+import torch
+from torch.utils.data import Dataset
 import numpy as np
 from collections import defaultdict
-from multiprocessing import Process, Queue
 
 
-def sample_function(user_train, usernum, itemnum, batch_size, maxlen, result_queue, SEED):
-    """
-    Negative sampling.
-    NB: also this function can be modified if we need to change the training of the model.
-    """
+class SASRecDataset(Dataset):
+    def __init__(self, user_sequences, usernum, maxlen):
+        self.user_sequences = user_sequences
+        self.maxlen = maxlen
+        self.users = [u for u in range(1, usernum+1) if len(user_sequences[u]) > 1]
 
-    # sampler for batch generation
-    def random_neq(l, r, s):
-        """
-        Repetitive sampling until the sample is not in s.
-        """
-        t = np.random.randint(l, r)
-        while t in s:
-            t = np.random.randint(l, r)
-        return t
+    def __len__(self):
+        return len(self.users)
 
-    def sample(uid):
+    def __getitem__(self, index):
+        uid = self.users[index]
+        history = self.user_sequences[uid]
 
-        # uid = np.random.randint(1, usernum + 1)
-        while len(user_train[uid]) <= 1: uid = np.random.randint(1, usernum + 1)
+        input_items = history[:-1]
+        target_items = history[1:]
 
-        seq = np.zeros([maxlen], dtype=np.int32)
-        pos = np.zeros([maxlen], dtype=np.int32)
-        neg = np.zeros([maxlen], dtype=np.int32)
-        nxt = user_train[uid][-1]
-        idx = maxlen - 1
+        input_items = input_items[-self.maxlen:]
+        target_items = target_items[-self.maxlen:]
 
-        ts = set(user_train[uid])
-        for i in reversed(user_train[uid][:-1]):
-            seq[idx] = i
-            pos[idx] = nxt
-            neg[idx] = random_neq(1, itemnum + 1, ts)          # Don't need "if nxt != 0"
-            nxt = i
-            idx -= 1
-            if idx == -1: break
+        # passare direttamente a tensori se riesco
+        # seq = torch.zeros(self.maxlen, dtype=torch.long)
+        seq = np.zeros([self.maxlen], dtype=np.int64)
+        target = np.zeros([self.maxlen], dtype=np.int64)
 
-        return (uid, seq, pos, neg)
+        # seq[-len(input_items):] = torch.tensor(input_items, dtype=torch.long)
+        # target[-len(target_items):] = torch.tensor(target_items, dtype=torch.long)
 
-    np.random.seed(SEED)
-    uids = np.arange(1, usernum+1, dtype=np.int32)
-    counter = 0
-    while True:
-        if counter % usernum == 0:
-            np.random.shuffle(uids)
-        one_batch = []
-        for i in range(batch_size):
-            one_batch.append(sample(uids[counter % usernum]))
-            counter += 1
-        result_queue.put(zip(*one_batch))
+        seq[-len(input_items):] = input_items
+        target[-len(target_items):] = target_items
 
+        return uid, seq, target
 
-class WarpSampler(object):
-    """
-    It is needed for the negative sampling.
-    """
-    def __init__(self, User, usernum, itemnum, batch_size=64, maxlen=10, n_workers=1):
-        self.result_queue = Queue(maxsize=n_workers * 10)
-        self.processors = []
-        for i in range(n_workers):
-            self.processors.append(
-                Process(target=sample_function, args=(User,
-                                                      usernum,
-                                                      itemnum,
-                                                      batch_size,
-                                                      maxlen,
-                                                      self.result_queue,
-                                                      np.random.randint(2e9)
-                                                      )))
-            self.processors[-1].daemon = True
-            self.processors[-1].start()
+def evaluate(model, dataloader, args):
+    model.eval()
 
-    def next_batch(self):
-        return self.result_queue.get()
+    ce_criterion = torch.nn.CrossEntropyLoss(ignore_index=0, reduction='sum')
 
-    def close(self):
-        for p in self.processors:
-            p.terminate()
-            p.join()
+    total_loss = 0.0
+    total_predictions = 0
+    correct1 = 0.0
+    correctk = 0.0
 
+    for batch in dataloader:
+        uids, seqs, targets = batch
+        uids = uids.to(args.device)
+        seqs = seqs.to(args.device)
+        targets = targets.to(args.device)
 
-def data_partition(fname):
-    """
-    Function to generate the data splitting for train/val/test split.
-    This function read the dataset file, and then extract the number of users, and items in the dataset.
-    Then it splits the dataset into train/val/test. If a users has less than 4 interactions, it will not be used for the
-    validation/test split. Else, the last interaction is used for test, while the second to last is used for training.
-    NB: Also, this function is specific for this tipe of discriminative training, potentially to be modified if we want
-    to use generative training.
-    NB: This function doesn't implement k-core.
-    """
+        with torch.no_grad():
+            logits = model(uids, seqs)
+            batch_size, maxlen, num_items = logits.shape
+            logits = logits.view(-1, num_items)  # (batch_size*maxlen, num_items)
+            targets = targets.view(-1)  # (batch_size*maxlen,)
+
+            mask = targets != 0
+            valid_logits = logits[mask]
+            valid_targets = targets[mask]
+
+            pred1 = valid_logits.argmax(-1)
+            correct1 += (pred1 == valid_targets).sum().item()
+
+            topk_idx = valid_logits.topk(10, dim=1).indices
+            correctk += (topk_idx == valid_targets.unsqueeze(1)).any(dim=1).sum().item()
+
+            loss = ce_criterion(logits, targets)
+
+        total_loss += loss.item()
+        total_predictions += (targets != 0).sum().item()
+
+    avg_loss = total_loss / total_predictions
+    perplexity = np.exp(avg_loss)
+    top1 = correct1 / total_predictions
+    topk = correctk / total_predictions
+
+    return avg_loss, perplexity, top1, topk
+
+# divido caricamento e splitting, che mi sembra la cosa migliore effettivamente
+def load_interactions(fname):
+
+    user_sequences = defaultdict(list)
     usernum = 0
     itemnum = 0
-    User = defaultdict(list)
+
+    with open(fname, 'r') as f:
+        for line in f:
+            u, i = line.rstrip().split(' ')
+            u = int(u)
+            i = int(i)
+
+            user_sequences[u].append(i)
+
+            usernum = max(u, usernum)
+            itemnum = max(i, itemnum)
+
+    return user_sequences, usernum, itemnum
+
+
+def temporal_split(user_sequences, val_ratio=0.1, test_ratio=0.1, min_interaction=5):
+
     user_train = {}
     user_valid = {}
     user_test = {}
 
-    # assume user/item index starting from 1
-    f = open('data/%s.txt' % fname, 'r')
-    for line in f:
-        u, i = line.rstrip().split(' ')
-        u = int(u)
-        i = int(i)
-        usernum = max(u, usernum)
-        itemnum = max(i, itemnum)
-        User[u].append(i)
+    for user, seq in user_sequences.items():
 
-    for user in User:
-        nfeedback = len(User[user])
-        if nfeedback < 4:  # To be rigorous, the training set needs at least two data points to learn
-            # if the user has less than 4 interaction, it goes in to the training set only
-            user_train[user] = User[user]
+        n = len(seq)
+
+        if n < min_interaction:
+            user_train[user] = seq
             user_valid[user] = []
             user_test[user] = []
-        else:
-            # else the test set is the last item in the sequence, while the validations is the second to last.
-            user_train[user] = User[user][:-2]
-            user_valid[user] = []
-            user_valid[user].append(User[user][-2])
-            user_test[user] = []
-            user_test[user].append(User[user][-1])
+            continue
+
+        n_test = max(1, int(n * test_ratio))
+        n_val = max(1, int(n * val_ratio))
+
+        train_end = n - (n_val + n_test)
+        val_end = n - n_val
+
+        user_train[user] = seq[:train_end]
+        user_valid[user] = seq[train_end:val_end]
+        user_test[user] = seq[val_end:]
+
+    return user_train, user_valid, user_test
+
+
+def data_partition(fname, val_ratio=0.1, test_ratio=0.1):
+
+    user_sequences, usernum, itemnum = load_interactions(fname)
+    user_train, user_valid, user_test = temporal_split(user_sequences, val_ratio, test_ratio)
 
     return [user_train, user_valid, user_test, usernum, itemnum]
 
+def set_seed(seed):
 
-def evaluate_model(model, dataset, args, mode):
-    """
-    Unified evaluation function for validation and test sets.
-    mode: 'test' or 'valid'
-    """
-
-    [train, valid, test, usernum, itemnum] = dataset
-
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-
-    NDCG = 0.0
-    HT = 0.0
-    valid_user = 0.0
-
-    # Limit to 10k users for speed if dataset is huge
-    if usernum > 10000:
-        users = random.sample(range(1, usernum + 1), 10000)
-    else:
-        users = range(1, usernum + 1)
-
-    for u in users:
-        if len(train[u]) < 1:
-            continue
-
-        if mode == 'test' and len(test[u]) < 1:
-            continue
-
-        if mode == 'valid' and len(valid[u]) < 1:
-            continue
-
-        seq = np.zeros([args.maxlen], dtype=np.int32)
-
-        if mode == 'test':
-            full_history = train[u] + valid[u]
-            target_item = test[u][0]
-        else:
-            full_history = train[u]
-            target_item = valid[u][0]
-
-        # padding
-        cut = full_history[-args.maxlen:]
-        seq[-len(cut):] = cut
-
-        # negative sampling of 100 negative
-        rated = set(train[u])
-        rated.add(0)
-
-        # valid e test should not be negative (difference from original implementation)
-        if len(valid[u]) > 0:
-            rated.add(valid[u][0])
-        if len(test[u]) > 0:
-            rated.add(test[u][0])
-
-        item_idx = [target_item]
-
-        for _ in range(100):
-            t = np.random.randint(1, itemnum + 1)
-            while t in rated:
-                t = np.random.randint(1, itemnum + 1)
-            item_idx.append(t)
-
-        predictions = -model.predict(*[np.array(l) for l in [[u], [seq], item_idx]])
-        predictions = predictions[0]  # - for 1st argsort DESC
-
-        rank = predictions.argsort().argsort()[0].item()
-
-        valid_user += 1
-
-        if rank < 10:
-            NDCG += 1 / np.log2(rank + 2)
-            HT += 1
-        if valid_user % 100 == 0:
-            print('.', end="")
-            sys.stdout.flush()
-
-    return NDCG / valid_user, HT / valid_user
-
-
-def evaluate(model, dataset, args):
-    return evaluate_model(model, dataset, args, mode='test')
-
-
-def evaluate_valid(model, dataset, args):
-    return evaluate_model(model, dataset, args, mode='valid')
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    print(f"Global seed set to {seed}.")
