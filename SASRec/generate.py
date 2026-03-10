@@ -143,7 +143,7 @@ if __name__ == '__main__':
     user_sequences, usernum, itemnum = load_interactions(os.path.join('data', f"{args.dataset}.txt"))
 
     # Model Instantiation
-    model = SASRec(usernum, itemnum, config)
+    model = SASRec(usernum, itemnum, config, device=args.device)
     model.load_state_dict(checkpoint)
     model.to(args.device)
     model.eval()

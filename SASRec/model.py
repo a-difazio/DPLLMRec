@@ -20,12 +20,12 @@ class PointWiseFeedForward(torch.nn.Module):
 
 
 class SASRec(torch.nn.Module):
-    def __init__(self, user_num, item_num, args):
+    def __init__(self, user_num, item_num, args, device):
         super(SASRec, self).__init__()
 
         self.user_num = user_num
         self.item_num = item_num
-        self.dev = args.device
+        self.dev = device
         self.norm_first = args.norm_first
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
