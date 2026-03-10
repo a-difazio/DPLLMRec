@@ -80,6 +80,7 @@ def generate_sequences(user_sequences, itemnum, model, config, options):
             seq_tensor_input = seq_tensor.unsqueeze(0)
 
             logits = model.predict(user, seq_tensor_input) / temperature
+            logits[:, 0] = float('-inf')
 
             # Anti-repetition
             if no_repeat:
