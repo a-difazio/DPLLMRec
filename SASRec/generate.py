@@ -71,7 +71,7 @@ def generate_sequences(user_sequences, itemnum, model, config, options):
         gen_length = max_gen_len or (len(seq) - context_len)
 
         seq_tensor = torch.zeros(config.maxlen, dtype=torch.long, device=config.device)
-        counts = torch.zeros(itemnum, dtype=torch.long, device=config.device)
+        counts = torch.zeros(itemnum+1, dtype=torch.long, device=config.device)
 
         for _ in range(gen_length):
             input_seq = generated[-config.maxlen:]
@@ -112,6 +112,7 @@ def generate_sequences(user_sequences, itemnum, model, config, options):
             next_item = torch.multinomial(probs, 1).item()
             generated.append(next_item)
             counts[next_item] += 1
+            assert counts[0] == 0, "Padding generated as next item!"
 
         synthetic[user] = generated if include_context else generated[context_len:]
 
