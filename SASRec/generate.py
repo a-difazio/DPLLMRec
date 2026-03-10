@@ -54,7 +54,7 @@ def load_checkpoint(path, device):
 
     return checkpoint
 
-def generate_sequences(user_sequences, itemnum, model, config, options):
+def generate_sequences(user_sequences, itemnum, model, config, device, options):
     context_len = options.get("context_len", 5)
     max_gen_len = options.get("max_gen_len", None)
     temperature = options.get("temperature", 1.0)
@@ -70,13 +70,13 @@ def generate_sequences(user_sequences, itemnum, model, config, options):
         generated = seq[:context_len]
         gen_length = max_gen_len or (len(seq) - context_len)
 
-        seq_tensor = torch.zeros(config.maxlen, dtype=torch.long, device=config.device)
-        counts = torch.zeros(itemnum, dtype=torch.long, device=config.device)
+        seq_tensor = torch.zeros(config.maxlen, dtype=torch.long, device=device)
+        counts = torch.zeros(itemnum, dtype=torch.long, device=device)
 
         for _ in range(gen_length):
             input_seq = generated[-config.maxlen:]
             seq_tensor[:] = 0
-            seq_tensor[-len(input_seq):] = torch.tensor(input_seq, dtype=torch.long, device=config.device)
+            seq_tensor[-len(input_seq):] = torch.tensor(input_seq, dtype=torch.long, device=device)
             seq_tensor_input = seq_tensor.unsqueeze(0)
 
             logits = model.predict(user, seq_tensor_input) / temperature
@@ -192,5 +192,5 @@ if __name__ == '__main__':
     for name, opts in experiments.items():
         print(f"Running generation with options: {opts}")
         with torch.no_grad():
-            synthetic = generate_sequences(user_sequences, itemnum, model, config, opts)
+            synthetic = generate_sequences(user_sequences, itemnum, model, config, args.device, opts)
         save_synthetic(results_dir, args.dataset, opts, synthetic)
