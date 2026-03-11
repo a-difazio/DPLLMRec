@@ -28,7 +28,7 @@ def setup_paths(args):
         raise FileNotFoundError(f"Original dataset not found: {original_path}")
 
     generated_path = os.path.join('experiments', f'{args.experiment}', 'generated_data',
-                                  f"{generated}.txt")
+                                  f"{args.generated}.txt")
 
     if not os.path.exists(generated_path):
         raise FileNotFoundError(f"Generated dataset not found: {generated_path}")

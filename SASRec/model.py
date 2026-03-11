@@ -147,7 +147,7 @@ class SASRec(torch.nn.Module):
         # Prendo i primi context len items
         prompt = seq[:context_len]
         # Lunghezza della generazione pari al massimo (se specificato) o alla lunghezza originale della sequenza
-        prompt_len = len(prompt)
+        prompt_len = len(seq)
         gen_len = max_gen_len or prompt_len
         generated_sequence = []
 
