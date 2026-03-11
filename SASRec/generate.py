@@ -56,7 +56,8 @@ def load_checkpoint(path, device):
     return checkpoint
 
 def save_synthetic(results_dir, dataset, options, synthetic):
-    filename = f"synthetic_{dataset}_temp{options['temperature']}_pen{options['penalty']}_norep{options['no_repeat']}.txt"
+    exp_name = options.get("name", "run")
+    filename = f"synthetic_{dataset}_{exp_name}.txt"
     filepath = os.path.join(results_dir, filename)
 
     with open(filepath, "w") as f:
