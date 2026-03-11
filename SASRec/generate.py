@@ -55,8 +55,7 @@ def load_checkpoint(path, device):
 
     return checkpoint
 
-def save_synthetic(results_dir, dataset, options, synthetic):
-    exp_name = options.get("name", "run")
+def save_synthetic(results_dir, dataset, exp_name, synthetic):
     filename = f"synthetic_{dataset}_{exp_name}.txt"
     filepath = os.path.join(results_dir, filename)
 
@@ -175,4 +174,4 @@ if __name__ == '__main__':
         for user, sequence in tqdm(user_sequences.items()):
             synthetic[user] = model.generate(user, sequence, config, opts)
 
-        save_synthetic(results_dir, args.dataset, opts, synthetic)
+        save_synthetic(results_dir, args.dataset, name, synthetic)
