@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 
@@ -128,49 +127,108 @@ class SASRec(torch.nn.Module):
 
         return logits
 
-"""
-    def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs):
-        # for training, sequence, positive items, negative items
-        # (batch_size, maxlen, hidden_units), contextual representation (features)
-        log_feats = self.log2feats(log_seqs)  # user_ids hasn't been used yet
+    @torch.no_grad()
+    def generate(self, user, seq, config, options):
 
-        # (batch_size, maxlen), items after log_seqs -> (batch_size, maxlen, hidden_units)
-        pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev))
-        # (batch_size, maxlen), negative sampling -> (batch_size, maxlen, hidden_units)
-        neg_embs = self.item_emb(torch.LongTensor(neg_seqs).to(self.dev))
+        context_len = options.get("context_len", 5)
+        max_gen_len = options.get("max_gen_len", None)
+        temperature = options.get("temperature", 1.0)
+        penalty = options.get("penalty", 0.0)
+        no_repeat = options.get("no_repeat", False)
+        include_context = options.get("include_context", True)
+        top_k = options.get("top_k", None)
+        top_p = options.get("top_p", None)
 
-        # (batch_size, maxlen), item relevance
-        pos_logits = (log_feats * pos_embs).sum(dim=-1)
-        # (batch_size, maxlen), item relevance
-        neg_logits = (log_feats * neg_embs).sum(dim=-1)
+        if temperature <= 0:
+            raise ValueError(f"temperature must be > 0, got {temperature}")
+        if top_k is not None and top_p is not None:
+            raise ValueError("Use either top_k or top_p, not both.")
 
-        # pos_pred = self.pos_sigmoid(pos_logits)
-        # neg_pred = self.neg_sigmoid(neg_logits)
+        # Prendo i primi context len items
+        prompt = seq[:context_len]
+        # Lunghezza della generazione pari al massimo (se specificato) o alla lunghezza originale della sequenza
+        prompt_len = len(prompt)
+        gen_len = max_gen_len or prompt_len
+        generated_sequence = []
 
-        return pos_logits, neg_logits  # pos_pred, neg_pred
-"""
+        # Counts delle generazioni per ogni item
+        counts = torch.zeros(self.item_num + 1, dtype=torch.long, device=self.dev)
 
-"""
-    def predict(self, user_ids, log_seqs, item_indices):
-        # for inference, sequence, sequence of candidates items ID
-        # (batch_size, maxlen, hidden_units), contextual representation (features)
-        log_feats = self.log2feats(log_seqs)  # user_ids hasn't been used yet
+        for step in range(gen_len):
+            # Padding
+            # Inizializzo un tensore di maxlen per il padding
+            prompt_tensor = torch.zeros(config.maxlen, dtype=torch.long, device=self.dev)
+            # "taglio" il prompt a maxlen (prendendo la coda della sequenza)
+            prompt_cut = prompt[-config.maxlen:]
+            # Adesso riempio il tensore con la sequenza così preparata
+            prompt_tensor[-len(prompt_cut):] = torch.tensor(prompt_cut, dtype=torch.long, device=self.dev)
+            # questo non ho capito a cosa mi serve, ora controllo
+            prompt_tensor = prompt_tensor.unsqueeze(0)
 
-        # (batch_size, hidden_units), extract feature vector for the last item in the sequence, for each batch
-        final_feat = log_feats[:, -1, :]  # only use last QKV classifier, a waste
-        # alternatives:
-        # - pooling/aggregation: mean, sum o max-pooling, of all log_feats for the sequence
-        # - output attention
+            # colcolo i logits
+            logits = self.predict(user, prompt_tensor)
+            # faccio masking sull'inidce 0 che è il padding
+            logits[:, 0] = float('-inf')
+            logits = logits / temperature
 
-        # (batch_size, num_candidates) -> (batch_size, num_candidates, hidden_units), items for witch compute the scores
-        item_embs = self.item_emb(torch.LongTensor(item_indices).to(self.dev))  # (U, I, C)
+            # Penalità anti-repetition soft
+            # applico una penalità sui logits, proporzionale a quante volte è già stato generato un item
+            if not no_repeat and penalty > 0:
+                logits -= penalty * counts.float()
 
-        # for each batch (num_candidates, hidden_units) * (hidden_units, 1) -> (batch_size, num_candidates)
-        # each logits[b, i] is the relevance score for user b, item i
-        logits = item_embs.matmul(final_feat.unsqueeze(-1)).squeeze(-1)
+            # Anti-repetition
+            if no_repeat and penalty == 0:
+                logits[:, generated_sequence] = float('-inf')
 
-        # preds = self.pos_sigmoid(logits) # rank same item list for different users
+            #  Top-k sampling
+            if top_k is not None and top_p is None:
+                k = min(int(top_k), logits.size(-1))
+                if k > 0:
+                    topk_vals, topk_idx = torch.topk(logits, k=k, dim=-1)
+                    filtered_logits = torch.full_like(logits, float('-inf'))
+                    filtered_logits.scatter_(dim=-1, index=topk_idx, src=topk_vals)
+                    logits = filtered_logits
 
-        return logits  # preds # (U, I)
-        
-"""
+            # Top-p Sampling
+            if top_p is not None and top_k is None:
+                sorted_logits, sorted_idx = torch.sort(logits, dim=-1, descending=True)
+                sorted_probs = torch.softmax(sorted_logits, dim=-1)
+                cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+
+                remove = cumulative_probs > top_p
+                remove[:, 0] = False
+
+                sorted_logits = sorted_logits.masked_fill(remove, float("-inf"))
+
+                filtered_logits = torch.full_like(logits, float('-inf'))
+                filtered_logits.scatter_(dim=-1, index=sorted_idx, src=sorted_logits)
+                logits = filtered_logits
+
+            # Guardrail: se tutti i logits sono invalidi, fallback uniforme sugli item validi (escluso padding).
+            if not torch.isfinite(logits).any(dim=-1).all():
+                logits = torch.zeros_like(logits)
+                logits[:, 0] = float('-inf')
+
+            # calcolo la probabilità di ogni item
+            probs = torch.softmax(logits, dim=-1)
+
+            # Guardrail numerico per evitare NaN/degenerate distribution.
+            invalid_probs = (~torch.isfinite(probs)).any(dim=-1) | (probs.sum(dim=-1) <= 0)
+            if invalid_probs.any():
+                probs = torch.zeros_like(probs)
+                probs[:, 1:] = 1.0
+                probs = probs / probs.sum(dim=-1, keepdim=True)
+
+            # Sampling del next item
+            next_item = torch.multinomial(probs, 1).item()
+
+            # Appendo il next item alla sequenza degli item generati
+            generated_sequence.append(next_item)
+            # E al prompt
+            prompt.append(next_item)
+
+            # Aggiorno il counter
+            counts[next_item] += 1
+            assert counts[0] == 0, "Padding generated as next item!"
+
+        return prompt if include_context else generated_sequence

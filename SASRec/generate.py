@@ -1,6 +1,7 @@
 import os
 from tqdm import tqdm
 from types import SimpleNamespace
+import torch
 
 import argparse
 import json
@@ -54,74 +55,9 @@ def load_checkpoint(path, device):
 
     return checkpoint
 
-def generate_sequences(user_sequences, itemnum, model, config, options):
-    context_len = options.get("context_len", 5)
-    max_gen_len = options.get("max_gen_len", None)
-    temperature = options.get("temperature", 1.0)
-    penalty = options.get("penalty", 0.0)
-    no_repeat = options.get("no_repeat", False)
-    include_context = options.get("include_context", True)
-    top_k = options.get("top_k", None)
-    top_p = options.get("top_p", None)
-
-    synthetic = {}
-
-    for user, seq in tqdm(user_sequences.items()):
-        generated = seq[:context_len]
-        gen_length = max_gen_len or (len(seq) - context_len)
-
-        seq_tensor = torch.zeros(config.maxlen, dtype=torch.long, device=config.device)
-        counts = torch.zeros(itemnum+1, dtype=torch.long, device=config.device)
-
-        for _ in range(gen_length):
-            input_seq = generated[-config.maxlen:]
-            seq_tensor[:] = 0
-            seq_tensor[-len(input_seq):] = torch.tensor(input_seq, dtype=torch.long, device=config.device)
-            seq_tensor_input = seq_tensor.unsqueeze(0)
-
-            logits = model.predict(user, seq_tensor_input) / temperature
-            # masking sullo zero
-            logits[:, 0] = float('-inf')
-
-            # Anti-repetition
-            if no_repeat:
-                logits[generated] = float('-inf')
-
-            probs = logits.softmax(dim=-1)
-
-            # Penalità anti-repetition soft
-            if not no_repeat and penalty > 0:
-                probs *= penalty ** counts.float()
-
-            # Top-p / Top-k sampling
-            if top_p is not None:  # Priorità top-p
-                sorted_probs, sorted_idx = torch.sort(probs, descending=True)
-                cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
-                mask = cumulative_probs <= top_p
-                mask[0] = True  # almeno un item
-                probs_filtered = torch.zeros_like(probs)
-                probs_filtered[sorted_idx[mask]] = probs[sorted_idx[mask]]
-                probs = probs_filtered
-            elif top_k is not None:
-                topk_vals, topk_idx = torch.topk(probs, k=top_k)
-                mask = torch.zeros_like(probs)
-                mask[topk_idx] = 1
-                probs = probs * mask
-
-            # Normalizzazione finale
-            probs = probs / probs.sum()
-
-            next_item = torch.multinomial(probs, 1).item()
-            generated.append(next_item)
-            counts[next_item] += 1
-            assert counts[0] == 0, "Padding generated as next item!"
-
-        synthetic[user] = generated if include_context else generated[context_len:]
-
-    return synthetic
-
 def save_synthetic(results_dir, dataset, options, synthetic):
-    filename = f"synthetic_{dataset}_temp{options['temperature']}_pen{options['penalty']}_norep{options['no_repeat']}.txt"
+    run_tag = options.get("name", "run")
+    filename = f"synthetic_{dataset}_{run_tag}.txt"
     filepath = os.path.join(results_dir, filename)
 
     with open(filepath, "w") as f:
@@ -148,53 +84,95 @@ if __name__ == '__main__':
 
     # Model Instantiation
     model = SASRec(usernum, itemnum, config)
-    model.load_state_dict(checkpoint)
+    if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+        model.load_state_dict(checkpoint["model_state_dict"])
+    else:
+        model.load_state_dict(checkpoint)
     model.to(args.device)
     model.eval()
 
     # Generation
     experiments = {
-        # Baseline soft
-        "baseline_free": {
-            "context_len": 5, "temperature": 1.0,
-            "penalty": 0.0, "no_repeat": False,
-            "include_context": False, "top_k": None, "top_p": None
+        # 1) Baseline puro: nessun controllo oltre temperature
+        "greedy_like_temp_0_7": {
+            "context_len": 5, "max_gen_len": None, "temperature": 0.7,
+            "penalty": 0.0, "no_repeat": False, "include_context": False,
+            "top_k": None, "top_p": None
         },
-        "baseline_deterministic": {
-            "context_len": 5, "temperature": 0.5,
-            "penalty": 0.0, "no_repeat": False,
-            "include_context": False, "top_k": None, "top_p": None
+        "baseline_temp_1_0": {
+            "context_len": 5, "max_gen_len": None, "temperature": 1.0,
+            "penalty": 0.0, "no_repeat": False, "include_context": False,
+            "top_k": None, "top_p": None
         },
-        "baseline_creative": {
-            "context_len": 5, "temperature": 1.5,
-            "penalty": 0.0, "no_repeat": False,
-            "include_context": False, "top_k": None, "top_p": None
-        },
-
-        # Soft anti-repetition con top-k
-        "soft_anti_repetition_top_k": {
-            "context_len": 5, "temperature": 1.0,
-            "penalty": 0.8, "no_repeat": False,
-            "include_context": False, "top_k": 10, "top_p": None
+        "creative_temp_1_3": {
+            "context_len": 5, "max_gen_len": None, "temperature": 1.3,
+            "penalty": 0.0, "no_repeat": False, "include_context": False,
+            "top_k": None, "top_p": None
         },
 
-        # Hard no-repetition con top-p
-        "hard_no_repetition_top_p": {
-            "context_len": 5, "temperature": 1.0,
-            "penalty": 0.0, "no_repeat": True,
-            "include_context": False, "top_k": None, "top_p": 0.9
+        # 2) Solo top-k (nucleus spento)
+        "topk_10_temp_1_0": {
+            "context_len": 5, "max_gen_len": None, "temperature": 1.0,
+            "penalty": 0.0, "no_repeat": False, "include_context": False,
+            "top_k": 10, "top_p": None
+        },
+        "topk_50_temp_1_0": {
+            "context_len": 5, "max_gen_len": None, "temperature": 1.0,
+            "penalty": 0.0, "no_repeat": False, "include_context": False,
+            "top_k": 50, "top_p": None
         },
 
-        # Hard no-repetition e creativa con top-p
-        "hard_no_repetition_creative_top_p": {
-            "context_len": 5, "temperature": 1.5,
-            "penalty": 0.0, "no_repeat": True,
-            "include_context": False, "top_k": None, "top_p": 0.9
-        }
+        # 3) Solo top-p (top-k spento)
+        "topp_0_9_temp_1_0": {
+            "context_len": 5, "max_gen_len": None, "temperature": 1.0,
+            "penalty": 0.0, "no_repeat": False, "include_context": False,
+            "top_k": None, "top_p": 0.9
+        },
+        "topp_0_95_temp_1_0": {
+            "context_len": 5, "max_gen_len": None, "temperature": 1.0,
+            "penalty": 0.0, "no_repeat": False, "include_context": False,
+            "top_k": None, "top_p": 0.95
+        },
+
+        # 4) Solo controllo ripetizione
+        "softrep_pen_0_1": {
+            "context_len": 5, "max_gen_len": None, "temperature": 1.0,
+            "penalty": 0.1, "no_repeat": False, "include_context": False,
+            "top_k": None, "top_p": None
+        },
+        "softrep_pen_0_3": {
+            "context_len": 5, "max_gen_len": None, "temperature": 1.0,
+            "penalty": 0.3, "no_repeat": False, "include_context": False,
+            "top_k": None, "top_p": None
+        },
+        "hard_norepeat": {
+            "context_len": 5, "max_gen_len": None, "temperature": 1.0,
+            "penalty": 0.0, "no_repeat": True, "include_context": False,
+            "top_k": None, "top_p": None
+        },
+
+        # 5) Combinazioni pragmatiche
+        "best_guess_topk10_softrep": {
+            "context_len": 5, "max_gen_len": None, "temperature": 1.0,
+            "penalty": 0.1, "no_repeat": False, "include_context": False,
+            "top_k": 10, "top_p": None
+        },
+        "best_guess_topp0_9_softrep": {
+            "context_len": 5, "max_gen_len": None, "temperature": 1.0,
+            "penalty": 0.1, "no_repeat": False, "include_context": False,
+            "top_k": None, "top_p": 0.9
+        },
+        "conservative_topp0_9_hard": {
+            "context_len": 5, "max_gen_len": None, "temperature": 0.9,
+            "penalty": 0.0, "no_repeat": True, "include_context": False,
+            "top_k": None, "top_p": 0.9
+        },
     }
 
     for name, opts in experiments.items():
         print(f"Running generation with options: {opts}")
-        with torch.no_grad():
-            synthetic = generate_sequences(user_sequences, itemnum, model, config, opts)
+        synthetic = {}
+        for user, sequence in tqdm(user_sequences.items()):
+            synthetic[user] = model.generate(user, sequence, config, opts)
+
         save_synthetic(results_dir, args.dataset, opts, synthetic)
