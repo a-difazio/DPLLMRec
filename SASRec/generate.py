@@ -56,13 +56,13 @@ def load_checkpoint(path, device):
     return checkpoint
 
 def save_synthetic(results_dir, dataset, exp_name, synthetic):
-    filename = f"synthetic_{dataset}_{exp_name}.txt"
+    filename = f"synthetic_{dataset}_{exp_name}.tsv"
     filepath = os.path.join(results_dir, filename)
 
     with open(filepath, "w") as f:
         for user_id, items in synthetic.items():
             for item in items:
-                f.write(f"{user_id} {item}\n")
+                f.write(f"{user_id}\t{item}\n")
 
     print(f'Results saved to {filepath}.')
 

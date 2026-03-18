@@ -92,7 +92,7 @@ def load_interactions(fname):
 
     with open(fname, 'r') as f:
         for line in f:
-            u, i = line.rstrip().split(' ')
+            u, i = line.rstrip().split('\t')
             u = int(u)
             i = int(i)
 

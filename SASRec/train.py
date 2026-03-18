@@ -82,7 +82,7 @@ if __name__ == '__main__':
     logger = setup_logger(output_path)
 
     # load the dataset and splits it
-    dataset = data_partition(os.path.join('data', f'{args.dataset}.txt'))
+    dataset = data_partition(os.path.join('data', f'{args.dataset}.tsv'))
     [user_train, user_valid, user_test, usernum, itemnum] = dataset
 
     # computes the average sequence length
