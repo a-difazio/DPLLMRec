@@ -56,7 +56,7 @@ def init_wandb(args):
     run = wandb.init(
         entity="angela-politecnico-di-bari",
         project="SASRec",
-        name=args.run_name,
+        name=f"{args.dataset}_{args.run_name}",
         config=vars(args)
     )
 
@@ -68,6 +68,18 @@ def setup_logger(output_path):
     print(f"Initialized metrics logger file: {log_path}")
 
     return logger
+
+def reset_memory_stats():
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
+
+def get_memory():
+    if torch.cuda.is_available():
+        return torch.cuda.max_memory_allocated() / 1024**2
+    elif torch.backends.mps.is_available():
+        return torch.mps.current_allocated_memory() / 1024**2
+    else:
+        return 0
 
 if __name__ == '__main__':
 
@@ -147,6 +159,7 @@ if __name__ == '__main__':
     best_val = float('inf')
     T = 0.0
     t0 = time.time()
+    reset_memory_stats()
 
     for epoch in range(epoch_start_idx, args.num_epochs + 1):
         model.train()
@@ -244,6 +257,10 @@ if __name__ == '__main__':
             logger.flush()
 
             t0 = time.time()
+
+    mem = get_memory()
+    print(f"[STATS] Batch size: {args.batch_size}")
+    print(f"[STATS] Max GPU memory: {mem:.2f} MB")
 
     logger.close()
     run.finish()
