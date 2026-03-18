@@ -16,7 +16,8 @@ python train.py \
     --num_epochs 1000 \
     --patience 5 \
     --eval_interval 10 \
-    --seed 42
+    --seed 42 \
+    --device cuda
 
 # Music
 python train.py \
@@ -32,7 +33,8 @@ python train.py \
     --num_epochs 1000 \
     --patience 10 \
     --eval_interval 10 \
-    --seed 42
+    --seed 42 \
+    --device cuda
 
 # Games
 python train.py \
@@ -48,6 +50,7 @@ python train.py \
     --num_epochs 1000 \
     --patience 10 \
     --eval_interval 10 \
-    --seed 42
+    --seed 42 \
+    --device cuda
 
 echo "=== Done ==="

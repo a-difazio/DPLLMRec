@@ -16,6 +16,7 @@ python train.py \
     --num_epochs 1000 \
     --patience 10 \
     --eval_interval 10 \
-    --seed 42
+    --seed 42 \
+    --device cuda
 
 echo "=== Done ==="
