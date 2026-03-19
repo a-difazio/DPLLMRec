@@ -189,13 +189,11 @@ if __name__ == '__main__':
             loss.backward()
             adam_optimizer.step()
 
-            if (step + 1) % 50 == 0 or (step + 1) == num_batch:
-                print(f"loss in epoch {epoch} iteration {step}: {loss.item():.4f}")
 
             current_epoch_loss += loss.item()
 
         avg_epoch_loss = current_epoch_loss / num_batch
-        print(f"Epoch {epoch} finished. Average loss: {avg_epoch_loss:.4f}")
+        print(f"Epoch {epoch} | loss: {avg_epoch_loss:.4f} | time: {time.time() - t0:.1f}s")
 
 
         if epoch % args.eval_interval  == 0:
@@ -221,7 +219,7 @@ if __name__ == '__main__':
             }
 
             print(
-                f"epoch: {metrics['epoch']}, time: {metrics['elapsed_s']:.1f}s, "
+                f"Eval epoch: {metrics['epoch']}, time: {metrics['elapsed_s']:.1f}s, "
                 f"train_loss: {metrics['avg_epoch_loss']:.4f}, "
                 f"valid(loss: {metrics['valid_loss']:.4f}, ppl: {metrics['valid_ppl']:.4f}, "
                 f"top1: {metrics['valid_top1']:.4f}, top10: {metrics['valid_top10']:.4f}), "
@@ -244,6 +242,7 @@ if __name__ == '__main__':
                 fname = f'checkpoint_best.pth'
                 checkpoint_path = os.path.join(checkpoint_dir, fname)
                 torch.save(model.state_dict(), checkpoint_path)
+                print(f'Saved best checkpoint at epoch {epoch} (val_loss={t_valid[0]:.4f})')
             else:
                 counter += 1
                 if counter >= patience:
@@ -251,7 +250,16 @@ if __name__ == '__main__':
                     break
 
             run.save(checkpoint_path)
-            run.log(metrics)
+            run.log({
+                "train_loss": metrics['avg_epoch_loss'],
+                "valid_loss": metrics['valid_loss'],
+                "valid_top1": metrics['valid_top1'],
+                "valid_top10": metrics['valid_top10'],
+                "test_loss": metrics['test_loss'],
+                "test_top1": metrics['test_top1'],
+                "test_top10": metrics['test_top10'],
+            }, step=epoch)
+
             json.dump(metrics, logger)
             logger.write('\n')
             logger.flush()
