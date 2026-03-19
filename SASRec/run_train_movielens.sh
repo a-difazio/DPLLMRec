@@ -1,11 +1,10 @@
 #!/bin/bash
 
-echo "=== Movielens ==="
+echo "=== SASRec CE Full Vocab Pretraining (MovieLens) ==="
 
-# ML-1M
 python train.py \
     --dataset movielens \
-    --run_name user_stratified_split \
+    --run_name v3 \
     --maxlen 200 \
     --hidden_units 50 \
     --num_heads 1 \
