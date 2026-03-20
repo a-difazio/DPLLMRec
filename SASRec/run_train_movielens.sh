@@ -4,7 +4,7 @@ echo "=== SASRec CE Full Vocab Pretraining (MovieLens) ==="
 
 python train.py \
     --dataset movielens \
-    --run_name v3 \
+    --run_name final \
     --maxlen 200 \
     --hidden_units 50 \
     --num_heads 1 \
