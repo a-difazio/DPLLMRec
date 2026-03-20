@@ -4,8 +4,8 @@ echo "=== SASRec CE Full Vocab Pretraining (Music) ==="
 
 python train.py \
     --dataset amazon_music \
-    --run_name maxlen20_v4 \
-    --maxlen 20 \
+    --run_name maxlen50_final \
+    --maxlen 50 \
     --hidden_units 50 \
     --num_heads 1 \
     --num_blocks 1 \
