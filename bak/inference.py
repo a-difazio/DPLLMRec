@@ -5,7 +5,7 @@ import numpy as np
 import sys
 
 from model import SASRec
-from utils import data_partition, build_index, evaluate, evaluate_valid
+from dp.utils import data_partition, build_index, evaluate, evaluate_valid
 
 
 def load_args_from_file(args_file_path):

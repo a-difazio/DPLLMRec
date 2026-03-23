@@ -1,9 +1,8 @@
 import os
 import argparse
-from collections import Counter
 from tqdm import tqdm
 from model import SASRec
-from utils import *
+from dp.utils import *
 from types import SimpleNamespace
 
 

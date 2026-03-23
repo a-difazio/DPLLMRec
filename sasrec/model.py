@@ -130,14 +130,13 @@ class SASRec(torch.nn.Module):
     @torch.no_grad()
     def generate(self, user, seq, config, options):
 
-        context_len = options.get("context_len", 5)
-        max_gen_len = options.get("max_gen_len", None)
-        temperature = options.get("temperature", 1.0)
-        penalty = options.get("penalty", 0.0)
-        no_repeat = options.get("no_repeat", False)
-        include_context = options.get("include_context", True)
-        top_k = options.get("top_k", None)
-        top_p = options.get("top_p", None)
+        context_len = options.context_len
+        temperature = options.temperature
+        penalty = options.penalty
+        no_repeat = options.no_repeat
+        include_context = options.include_context
+        top_k = options.top_k
+        top_p = options.top_p
 
         if temperature <= 0:
             raise ValueError(f"temperature must be > 0, got {temperature}")
@@ -148,7 +147,7 @@ class SASRec(torch.nn.Module):
         prompt = seq[:context_len]
         # Lunghezza della generazione pari al massimo (se specificato) o alla lunghezza originale della sequenza
         prompt_len = len(seq)
-        gen_len = max_gen_len or prompt_len
+        gen_len = prompt_len
         generated_sequence = []
 
         # Counts delle generazioni per ogni item

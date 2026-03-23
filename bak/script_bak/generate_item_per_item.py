@@ -1,9 +1,9 @@
 import os
 import argparse
-import wandb
+from collections import Counter
 from tqdm import tqdm
 from model import SASRec
-from utils import *
+from dp.utils import *
 from types import SimpleNamespace
 
 
@@ -40,56 +40,37 @@ def setup_generation(args):
     merged = {**args_dict, **vars(args)}
     args = SimpleNamespace(**merged)
 
-    run = wandb.init(
-        entity="angela-politecnico-di-bari",
-        project="SASRec",
-        config=args,
-    )
-
-    return args, model_path, run
-
-def generate_batch(model, users, prompts, args, itemnum, output_file, device):
-    batch_size = len(users)
-    maxlen = args.maxlen
-
-    # users tensor [batch_size]
-    users_tensor = torch.tensor(users, dtype=torch.long).to(device)
-
-    # padding [batch_size, maxlen]
-    seq_tensor = torch.zeros((batch_size, maxlen), dtype=torch.long).to(device)
-
-    # add sequencees to padding matrix
-    prompt_len = len(prompts[0])
-
-    for i, seq in enumerate(prompts):
-        cut = seq[-maxlen:]
-        seq_tensor[i, -len(cut):] = torch.tensor(cut, dtype=torch.long).to(device)
-
-    # item generated for each element in the batch
-    generated_sequences = [[] for _ in range(batch_size)]
-
-    # penality mask [batch, itemnum+1]
-    penality_mask = torch.zeros((batch_size, itemnum+1), dtype=torch.bool).to(device)
-
-    # all items
-    items_indices = np.arange(1, itemnum+1)
-
-    with torch.no_grad():
-        for _ in range(prompt_len):
-            # predict, logits: [batch, itemnum]
-            logits = model.predict(np.array([user]), seq_tensor, items_indices)
-
-            # sampling
-            probs = torch.softmax(logits / args.temperature, dim=-1)
-
-            # multinomial sampling batch
-            next_item_indices = torch.multinomial(probs, num_samples=1).squeeze(-1)
-
-            # mapping
-            next_items = next_item_indices + 1
+    return args, model_path
 
 
+def top_p(probs, p):
+    # take elements that sums to p
 
+    sorted_probs, sorted_idx = torch.sort(probs, descending=True)
+    cum = torch.cumsum(sorted_probs, dim=-1)
+
+    mask = cum <= p
+
+    mask[mask.sum()] = True
+
+    filtered = torch.zeros_like(probs)
+    filtered[sorted_idx[mask]] = probs[sorted_idx[mask]]
+
+    filtered = filtered / filtered.sum()
+
+    return filtered
+
+
+def top_k(probs, k):
+    # take top k elements
+    topk_vals, topk_idx = torch.topk(probs, k)
+
+    filtered = torch.zeros_like(probs)
+    filtered[topk_idx] = topk_vals
+
+    filtered = filtered / filtered.sum()
+
+    return filtered
 
 
 if __name__ == '__main__':
@@ -97,19 +78,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_dir', default='ml-1m_original')
     parser.add_argument('--model_file', required=True)
-    parser.add_argument('--temperature', type=float, default=1.0)
-    parser.add_argument('--penalty', type=float, default=0.1)
-    parser.add_argument('--device', default='cuda')
+    parser.add_argument('--temperature', type=float, default=1.2)
+    parser.add_argument('--penalty', type=float, default=0.95)
+    parser.add_argument('--topp', type=float, default=0.9)
+    parser.add_argument('--topk', type=float, default=50)
+    parser.add_argument('--device', default='mps')
     parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--gen_batch', type=int, default=128)
     args = parser.parse_args()
 
-    args, model_path, run = setup_generation(args)
+    args, model_path = setup_generation(args)
 
     device = torch.device(args.device)
 
     dataset = data_partition(args.dataset)
     [user_train, user_valid, user_test, usernum, itemnum] = dataset
+
+    print(itemnum)
 
     model = SASRec(usernum, itemnum, args)
     model.to(device)
@@ -119,21 +103,28 @@ if __name__ == '__main__':
 
     items_indices = np.array(range(1, itemnum+1))
 
-    output_path = os.path.join(args.dataset_dir, 'generated.txt')
+    output_path = os.path.join(args.dataset_dir, 'generated_item_per_item.txt')
 
     output = open(output_path, 'w')
-    output.write(f'user, item\n')
-    print(f'Starting generation with batch size {args.gen_batch}.')
+
+    print(f'Starting generation.')
     print(f'Saving result in: {output_path}')
 
     with torch.no_grad():
-        for user, seq in tqdm(user_train.items()):
+        for user, seq in tqdm(list(user_train.items())):
+            print(f"User {user}\n")
+            #if user == 4:
+                #break
 
-            prompt = seq[:]
-            prompt_len = len(prompt)
+            prompt_len = len(seq)
             generated_sequence = []
+            gen_len = min(prompt_len, args.maxlen)
 
-            for _ in range(prompt_len):
+            for l in range(gen_len):
+                prompt = seq[:l+1]
+
+                print(prompt)
+                print(generated_sequence)
 
                 # padding
                 seq_input = np.zeros([args.maxlen], dtype=np.int32)
@@ -148,18 +139,30 @@ if __name__ == '__main__':
                 probs = torch.softmax(logits / args.temperature, dim=-1)
 
                 # anti-repetition penalty
-                for item in set(generated_sequence):
-                    probs[item - 1] *= args.penalty
+                for item, count in Counter(generated_sequence).items():
+                    probs[item - 1] *= (args.penalty ** count)
 
                 probs = probs / probs.sum()
+
+
+                entropy = -torch.sum(probs * torch.log(probs + 1e-9), dim=-1)
+                print("\nentropy: ", entropy.mean().item())
+
+                pmax, idx = probs.max(dim=-1)
+                print("max:", pmax.item(), "item:", idx.item())
+
+                top_vals, top_idx = torch.topk(probs, k=10, dim=-1)
+                for i in range(10):
+                    print(f"{i + 1}: item={top_idx[i].item()}  p={top_vals[i].item():.4f}")
 
                 next_item_idx = torch.multinomial(probs, num_samples=1).item()
                 next_item = items_indices[next_item_idx].item()
 
                 generated_sequence.append(next_item)
-                prompt.append(next_item)
-                output.write(f'{user}, {next_item}\n')
+                output.write(f'{user},{next_item}\n')
 
-    run.finish()
+            print(f'Original {seq}')
+            print(f'Generated {generated_sequence}')
+
     output.close()
     print(f'Generation completed.')

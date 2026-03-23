@@ -137,6 +137,8 @@ def main():
         f"Interactions={metadata['n_interactions']}"
     )
 
-
 if __name__ == "__main__":
     main()
+
+# forse sarebbe meglio prendere questo
+# a questo punto printare le statistiche alla fine/salvarle, così posso metterle nel paper!

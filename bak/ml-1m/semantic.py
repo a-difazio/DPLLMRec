@@ -17,14 +17,14 @@ def print_sequence(user, sequence, movies, id2item):
             print(f"{sasrec_id:<8} | {real_id:<8} | Title Not Found")
 
 
-movies = pd.read_csv('../ml-1m/movies.dat', sep='::', names=['id', 'title', 'genres'], engine='python', encoding='latin-1')
+movies = pd.read_csv('movies.dat', sep='::', names=['id', 'title', 'genres'], engine='python', encoding='latin-1')
 movies.set_index('id', inplace=True)
 
-with open('../ml-1m/item_mapping.pkl', 'rb') as f:
+with open('item_mapping.pkl', 'rb') as f:
     id2item = pickle.load(f)
 
-orig_dataset = pd.read_csv('../ml-1m/ml-1m.txt', sep=" ", names=['user', 'item'])
-gen_dataset = pd.read_csv('../SASRec/ml-1m_mapping/generated_no_repetition.txt', sep=',', names=['user', 'item'])
+orig_dataset = pd.read_csv('ml-1m.txt', sep=" ", names=['user', 'item'])
+gen_dataset = pd.read_csv('../results/ml-1m_mapping/generated_no_repetition.txt', sep=',', names=['user', 'item'])
 
 orig_dict = orig_dataset.groupby('user')['item'].apply(list).to_dict()
 gen_dict = gen_dataset.groupby('user')['item'].apply(list).to_dict()

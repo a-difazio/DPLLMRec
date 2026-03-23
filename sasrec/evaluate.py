@@ -22,13 +22,13 @@ def setup_paths(args):
     os.makedirs(output_dir, exist_ok=True)
     print(f'Output directory: {output_dir}')
 
-    original_path = os.path.join('data', args.dataset + '.txt')
+    original_path = os.path.join('data', args.dataset + '.tsv')
 
     if not os.path.exists(original_path):
         raise FileNotFoundError(f"Original dataset not found: {original_path}")
 
     generated_path = os.path.join('experiments', f'{args.experiment}', 'generated_data',
-                                  f"{args.generated}.txt")
+                                  f"{args.generated}.tsv")
 
     if not os.path.exists(generated_path):
         raise FileNotFoundError(f"Generated dataset not found: {generated_path}")

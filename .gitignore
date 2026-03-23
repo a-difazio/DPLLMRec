@@ -1,4 +1,11 @@
-.env
 .venv
 .idea
-__pycache__
+__pycache__/
+*.pyc
+.env
+preprocessing/raw/
+preprocessing/preprocessed/
+sasrec/experiments/*
+sasrec/wandb/
+bak
+dp
