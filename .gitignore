@@ -9,3 +9,6 @@ sasrec/experiments/*
 sasrec/wandb/
 bak
 dp
+/bak/
+/dp/
+/sasrec/experiments/
