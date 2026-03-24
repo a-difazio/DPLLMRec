@@ -114,6 +114,15 @@ def compute_stats(original_path, generated_path):
     print(f"Original: {pop_original.sort_values(ascending=False).head(50).index.tolist()}")
     print(f"Generated: {pop_generated.sort_values(ascending=False).head(50).index.tolist()}")
 
+    # Max Frequency
+    print("\n--- Max Frequency ---\n")
+    stats['max_item_freq_orig'] = float(pop_original.max())
+    stats['max_item_freq'] = float(pop_generated.max())
+
+    print(f"Original: {stats['max_item_freq_orig']}")
+    print(f"Generated: {stats['max_item_freq']}")
+
+
     # Distribution Metrics
     print("\n--- Distribution ---\n")
     stats['_pop_original'] = pop_original.sort_index()
