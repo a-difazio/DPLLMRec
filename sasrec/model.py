@@ -130,7 +130,7 @@ class SASRec(torch.nn.Module):
     @torch.no_grad()
     def generate(self, user, seq, config, options):
 
-        context_len = options.context_len
+        context_len = options.context_len if options.context_len else min(config.maxlen, len(seq))
         temperature = options.temperature
         penalty = options.penalty
         no_repeat = options.no_repeat
@@ -144,7 +144,9 @@ class SASRec(torch.nn.Module):
             raise ValueError("Use either top_k or top_p, not both.")
 
         # Prendo i primi context len items
-        prompt = seq[:context_len]
+        # prompt = seq[:context_len]
+        # proviamo con approccio classico in cui prendo gli ultimi context len item
+        prompt = seq[-context_len:]
         # Lunghezza della generazione pari al massimo (se specificato) o alla lunghezza originale della sequenza
         prompt_len = len(seq)
         gen_len = prompt_len
