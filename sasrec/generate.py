@@ -45,7 +45,7 @@ def parser():
 def setup_paths(args):
     base_dir = os.path.join('experiments', f'{args.dataset}_{args.run_name}')
     checkpoint_path = os.path.join(base_dir, 'checkpoints', args.checkpoint)
-    config_path = os.path.join(base_dir, f'config_{args.run_name}.json')
+    config_path = os.path.join(base_dir, f'config.json')
     results_dir = os.path.join(base_dir, 'generated_data')
     stats_dir = os.path.join('experiments', f'{args.dataset}_{args.run_name}', "generated_stats", args.gen_name)
 
@@ -83,7 +83,7 @@ def load_checkpoint(path, device):
     return checkpoint
 
 def save_config(output_path, args):
-    path = os.path.join(output_path, 'config.json')
+    path = os.path.join(output_path, f'config_{args.dataset}.json')
 
     with open(path, 'w') as f:
         json.dump(vars(args), f, indent=4)
