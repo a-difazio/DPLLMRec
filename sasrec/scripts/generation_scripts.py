@@ -11,6 +11,7 @@ CHECKPOINT = 'checkpoint_best.pth'
 SEED = 42
 
 # Griglia esperimenti
+"""
 BLOCKS = [
     # Blocco 1 — solo temperatura
     {'temperature': 0.5,  'top_p': None, 'top_k': None, 'penalty': 0.0},
@@ -26,6 +27,22 @@ BLOCKS = [
     # Blocco 4 — solo penalty
     {'temperature': 1.0,  'top_p': None, 'top_k': None, 'penalty': 0.1},
     {'temperature': 1.0,  'top_p': None, 'top_k': None, 'penalty': 0.3},
+]
+"""
+
+BLOCKS = [
+    # Blocco 5 — aggiunte
+    {'temperature': 1.2,  'top_p': None, 'top_k': None, 'penalty': 0.1},
+    {'temperature': 1.2,  'top_p': None, 'top_k': None, 'penalty': 0.3},
+    {'temperature': 1.5,  'top_p': None, 'top_k': None, 'penalty': 0.0},
+    {'temperature': 1.5, 'top_p': None, 'top_k': None, 'penalty': 0.1},
+    {'temperature': 1.5, 'top_p': None, 'top_k': None, 'penalty': 0.3},
+    {'temperature': 1.5, 'top_p': 0.9, 'top_k': None, 'penalty': 0.0},
+    {'temperature': 1.5, 'top_p': 0.95, 'top_k': None, 'penalty': 0.0},
+    {'temperature': 1.5, 'top_p': 0.9, 'top_k': None, 'penalty': 0.1},
+    {'temperature': 1.5, 'top_p': 0.95, 'top_k': None, 'penalty': 0.1},
+    {'temperature': 1.5, 'top_p': 0.9, 'top_k': None, 'penalty': 0.3},
+    {'temperature': 1.5, 'top_p': 0.95, 'top_k': None, 'penalty': 0.3},
 ]
 
 def make_gen_name(params):
@@ -82,7 +99,7 @@ def make_script(dataset, train_run):
 if __name__ == '__main__':
     for dataset, train_run in DATASETS.items():
         script = make_script(dataset, train_run)
-        filename = f"run_generate_{dataset}.sh"
+        filename = f"run_generate_{dataset}_added.sh"
         with open(filename, 'w') as f:
             f.write(script)
         print(f"Generated {filename} ({len(BLOCKS)} experiments)")
