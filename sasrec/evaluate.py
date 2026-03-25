@@ -19,9 +19,8 @@ def parse():
 
 
 def setup_paths(args):
-    output_dir = os.path.join('experiments', f'{args.dataset}_{args.run_name}', "dataset_comparison", args.gen_name)
+    output_dir = os.path.join('experiments', f'{args.dataset}_{args.run_name}', "generated_stats", args.gen_name)
     os.makedirs(output_dir, exist_ok=True)
-    print(f'Output directory: {output_dir}')
 
     original_path = os.path.join('data', args.dataset + '.tsv')
 
@@ -65,6 +64,53 @@ def head_overlap(pop_orig, pop_gen, k=50):
     overlap = len(top_orig.intersection(top_gen)) / k
     return overlap
 
+def get_top_transitions(df, top_k=20):
+    transitions = df.dropna(subset=['prev_item']).copy()
+
+    transitions['pair'] = transitions['prev_item'].astype(str) + " -> " + transitions['item'].astype(int).astype(str)
+
+    counts = transitions['pair'].value_counts(normalize=True)
+    return counts, set(counts.head(top_k).index)
+
+
+def count_3_cycles(df):
+    df = df.copy()
+
+    df['prev3_item'] = df.groupby('user')['item'].shift(3)
+
+    cycles = df[df['item'] == df['prev3_item']]
+
+    return len(cycles) / len(df)
+
+
+def count_short_loops(df):
+    df = df.copy()
+
+    df['prev_item'] = df.groupby('user')['item'].shift(1)
+    df['prev2_item'] = df.groupby('user')['item'].shift(2)
+
+    loops = df[(df['item'] == df['prev2_item'])]
+
+    return len(loops) / len(df)
+
+def ngram_distribution(df, n=2, top_k=None):
+    ngrams = []
+    for _, group in df.groupby('user'):
+        items = group['item'].tolist()
+        for i in range(len(items) - n + 1):
+            ngrams.append(tuple(items[i:i+n]))
+    counts = pd.Series(ngrams).value_counts(normalize=True)
+    return counts.head(top_k) if top_k else counts
+
+
+def ngram_jsd(df_orig, df_gen, n=2, top_k=None):
+    dist_orig = ngram_distribution(df_orig, n, top_k)
+    dist_gen  = ngram_distribution(df_gen, n, top_k)
+    all_ngrams = set(dist_orig.index) | set(dist_gen.index)
+    dist_orig  = dist_orig.reindex(all_ngrams, fill_value=0)
+    dist_gen   = dist_gen.reindex(all_ngrams, fill_value=0)
+    epsilon = 1e-12
+    return float(jensenshannon(dist_orig + epsilon, dist_gen + epsilon))
 
 
 def compute_stats(original_path, generated_path):
@@ -231,49 +277,21 @@ def compute_stats(original_path, generated_path):
     top5_share = repeat_items.head(5).sum()
     print(f"Top-5 items explain {top5_share:.2%} of repetitions")
 
-    def count_short_loops(df):
-        df = df.copy()
+    stats['short_loops_orig'] = float(count_short_loops(original))
+    stats['short_loops_gen'] = float(count_short_loops(generated))
 
-        df['prev_item'] = df.groupby('user')['item'].shift(1)
-        df['prev2_item'] = df.groupby('user')['item'].shift(2)
-
-        loops = df[(df['item'] == df['prev2_item'])]
-
-        return len(loops) / len(df)
-
-    loop_orig = count_short_loops(original)
-    loop_gen = count_short_loops(generated)
-
-    print(f"Short loops (original): {loop_orig:.4f}")
-    print(f"Short loops (generated): {loop_gen:.4f}")
+    print(f"Short loops (original): {stats['short_loops_orig']:.4f}")
+    print(f"Short loops (generated): {stats['short_loops_gen']:.4f}")
 
     # 3-cycles
+    stats['cycles3_orig'] = float(count_3_cycles(original))
+    stats['cycles3_gen'] = float(count_3_cycles(generated))
 
-    def count_3_cycles(df):
-        df = df.copy()
-
-        df['prev3_item'] = df.groupby('user')['item'].shift(3)
-
-        cycles = df[df['item'] == df['prev3_item']]
-
-        return len(cycles) / len(df)
-
-    cycle3_orig = count_3_cycles(original)
-    cycle3_gen = count_3_cycles(generated)
-
-    print(f"3-cycles (original): {cycle3_orig:.4f}")
-    print(f"3-cycles (generated): {cycle3_gen:.4f}")
+    print(f"3-cycles (original): {stats['cycles3_orig']:.4f}")
+    print(f"3-cycles (generated): {stats['cycles3_gen']:.4f}")
 
     # Transition
     print(f"\n--- Transition Analysis ---\n")
-
-    def get_top_transitions(df, top_k=20):
-        transitions = df.dropna(subset=['prev_item']).copy()
-
-        transitions['pair'] = transitions['prev_item'].astype(str) + " -> " + transitions['item'].astype(int).astype(str)
-
-        counts = transitions['pair'].value_counts(normalize=True)
-        return counts, set(counts.head(top_k).index)
 
     trans_orig_dist, top_k_orig = get_top_transitions(original_copy, top_k=50)
     trans_gen_dist, top_k_gen = get_top_transitions(generated_copy, top_k=50)
@@ -292,6 +310,13 @@ def compute_stats(original_path, generated_path):
     # Jaccard Similarity
     jaccard = intersection / union if union > 0 else 0
     print(f"Jaccard Similarity (Top-50): {jaccard:.4f}")
+
+    # ngram, loops
+    stats['jsd_bigram'] = ngram_jsd(original, generated, n=2)
+    stats['jsd_trigram'] = ngram_jsd(original, generated, n=3)
+
+    print(f"Bigram JSD:  {stats['jsd_bigram']:.4f}")
+    print(f"Trigram JSD: {stats['jsd_trigram']:.4f}")
 
     return stats
 
