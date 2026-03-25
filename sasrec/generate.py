@@ -45,7 +45,7 @@ def parser():
 def setup_paths(args):
     base_dir = os.path.join('experiments', f'{args.dataset}_{args.run_name}')
     checkpoint_path = os.path.join(base_dir, 'checkpoints', args.checkpoint)
-    config_path = os.path.join(base_dir, 'config.json')
+    config_path = os.path.join(base_dir, f'config_{args.run_name}.json')
     results_dir = os.path.join(base_dir, 'generated_data')
     stats_dir = os.path.join('experiments', f'{args.dataset}_{args.run_name}', "generated_stats", args.gen_name)
 
