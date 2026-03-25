@@ -32,7 +32,7 @@ if __name__ == "__main__":
     args = parse()
     experiment_name = f"{args['dataset']}_{args['run_name']}"
     stats_dir = os.path.join(SASREC_DIR, "experiments", experiment_name, "generated_stats")
-    output_file = os.path.join(stats_dir, "aggregate_stats.csv")
+    output_file = os.path.join(stats_dir, f"aggregate_stats_{args['dataset']}.csv")
 
     stats = load_all_stats(stats_dir)
     stats = stats.sort_values(by=['config']).reset_index(drop=True)
