@@ -83,7 +83,7 @@ def load_checkpoint(path, device):
     return checkpoint
 
 def save_config(output_path, args):
-    path = os.path.join(output_path, f'config_{args.dataset}.json')
+    path = os.path.join(output_path, f'config_{args.gen_name}.json')
 
     with open(path, 'w') as f:
         json.dump(vars(args), f, indent=4)
