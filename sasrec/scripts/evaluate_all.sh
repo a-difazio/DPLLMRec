@@ -19,72 +19,58 @@ run_eval () {
     --gen_name "$gen_name"
 }
 
-# ------------------------
-# Movielens (run_name = final)
-# ------------------------
-DATASET="movielens"
-RUN_NAME="final"
+CONFIGS=(
+  "temp0.5_toppnone_topknone_pen0.0"
+  "temp0.7_toppnone_topknone_pen0.0"
 
-run_eval $DATASET $RUN_NAME temp0.5_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp0.7_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.2_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_topp0.9_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_topp0.95_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topk10_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topk50_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.1
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.3
+  "temp1.0_toppnone_topknone_pen0.0"
+  "temp1.0_toppnone_topknone_pen0.1"
+  "temp1.0_toppnone_topknone_pen0.3"
 
-# ------------------------
-# Amazon Music
-# ------------------------
-DATASET="amazon_music"
-RUN_NAME="maxlen50_final"
+  "temp1.2_toppnone_topknone_pen0.0"
+  "temp1.2_toppnone_topknone_pen0.1"
+  "temp1.2_toppnone_topknone_pen0.3"
 
-run_eval $DATASET $RUN_NAME temp0.5_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp0.7_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.2_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_topp0.9_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_topp0.95_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topk10_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topk50_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.1
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.3
+  "temp1.0_topp0.9_topknone_pen0.0"
+  "temp1.0_topp0.95_topknone_pen0.0"
+
+  "temp1.0_toppnone_topk10_pen0.0"
+  "temp1.0_toppnone_topk50_pen0.0"
+
+  "temp1.5_topp0.9_topknone_pen0.0"
+  "temp1.5_topp0.9_topknone_pen0.1"
+  "temp1.5_topp0.9_topknone_pen0.3"
+
+  "temp1.5_topp0.95_topknone_pen0.0"
+  "temp1.5_topp0.95_topknone_pen0.1"
+  "temp1.5_topp0.95_topknone_pen0.3"
+
+  "temp1.5_toppnone_topknone_pen0.0"
+  "temp1.5_toppnone_topknone_pen0.1"
+  "temp1.5_toppnone_topknone_pen0.3"
+)
 
 # ------------------------
-# Amazon Games
+# DATASETS
 # ------------------------
-DATASET="amazon_games"
-RUN_NAME="maxlen50_final"
 
-run_eval $DATASET $RUN_NAME temp0.5_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp0.7_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.2_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_topp0.9_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_topp0.95_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topk10_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topk50_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.1
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.3
+DATASETS=(
+  "movielens|final"
+  "amazon_music|maxlen50_final"
+  "amazon_games|maxlen50_final"
+  "amazon_cds|maxlen50_final"
+)
 
 # ------------------------
-# Amazon CDs
+# RUN
 # ------------------------
-DATASET="amazon_cds"
-RUN_NAME="maxlen50_final"
 
-run_eval $DATASET $RUN_NAME temp0.5_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp0.7_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.2_toppnone_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_topp0.9_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_topp0.95_topknone_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topk10_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topk50_pen0.0
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.1
-run_eval $DATASET $RUN_NAME temp1.0_toppnone_topknone_pen0.3
+for ds in "${DATASETS[@]}"; do
+  IFS="|" read -r DATASET RUN_NAME <<< "$ds"
+
+  for cfg in "${CONFIGS[@]}"; do
+    run_eval "$DATASET" "$RUN_NAME" "$cfg"
+  done
+done
 
 echo "=== Done ==="
