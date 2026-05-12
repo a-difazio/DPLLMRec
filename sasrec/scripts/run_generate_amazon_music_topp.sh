@@ -4,7 +4,7 @@ DEVICE=${1:-cuda}
 
 echo "=== Generating for amazon_music (device: $DEVICE) ==="
 
-TOP_PS=(0.1 0.2 0.3 0.5 0.7 0.8 0.9 0.95 1)
+TOP_PS=(0.1 0.2 0.3 0.5 0.6 0.7 0.8 0.9 0.95 1)
 
 for TOP_P in "${TOP_PS[@]}"
 do
