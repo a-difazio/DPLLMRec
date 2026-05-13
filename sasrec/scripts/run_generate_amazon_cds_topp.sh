@@ -14,7 +14,7 @@ do
 
     python generate.py \
         --dataset amazon_cds \
-        --run_name maxlen50_final \
+        --run_name final \
         --gen_name $GEN_NAME \
         --checkpoint checkpoint_best.pth \
         --device $DEVICE \
