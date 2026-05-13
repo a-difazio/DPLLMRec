@@ -4,7 +4,7 @@ echo "=== SASRec CE Full Vocab Pretraining (CDs) ==="
 
 python train.py \
     --dataset amazon_cds \
-    --run_name maxlen50_final \
+    --run_name final \
     --maxlen 50 \
     --hidden_units 50 \
     --num_heads 1 \
