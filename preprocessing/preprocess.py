@@ -20,45 +20,20 @@ def load_movielens():
                           names=['user', 'item', 'rating', 'timestamp'],
                           engine='python')
 
-def load_amazon_beauty():
-    return pd.read_csv(os.path.join(DATA_DIR, 'All_Beauty.csv'), sep=',',
-                          names=['user', 'item', 'rating', 'timestamp'])
-
-def load_amazon_toys():
-    return pd.read_csv(os.path.join(DATA_DIR, 'Toys_and_Games.csv'), sep=',',
-                          names=['user', 'item', 'rating', 'timestamp'])
-
-def load_amazon_books():
-    return pd.read_csv(os.path.join(DATA_DIR, 'Books.csv'), sep=',',
-                       names=['user', 'item', 'rating', 'timestamp'])
-
 def load_amazon_music():
-    return pd.read_csv(os.path.join(DATA_DIR, 'Digital_Music.csv'), sep=',',
-                       names=['user', 'item', 'rating', 'timestamp'])
+    df = pd.read_csv(os.path.join(DATA_DIR, 'Digital_Music.csv'), sep=',',
+                       names=['item', 'user', 'rating', 'timestamp'])
+    return df[['user', 'item', 'rating', 'timestamp']]
 
 def load_amazon_cds():
-    return pd.read_csv(os.path.join(DATA_DIR, 'CDs_and_Vinyl.csv'), sep=',',
-                       names=['user', 'item', 'rating', 'timestamp'])
-
-def load_amazon_movies():
-    return pd.read_csv(os.path.join(DATA_DIR, 'Movies_and_TV.csv'), sep=',',
-                       names=['user', 'item', 'rating', 'timestamp'])
-
-def load_amazon_sports():
-    return pd.read_csv(os.path.join(DATA_DIR, 'Sports_and_Outdoors.csv'), sep=',',
-                       names=['user', 'item', 'rating', 'timestamp'])
-
-def load_amazon_fashion():
-    return pd.read_csv(os.path.join(DATA_DIR, 'AMAZON_FASHION.csv'), sep=',',
-                       names=['user', 'item', 'rating', 'timestamp'])
-
-def load_amazon_clothing():
-    return pd.read_csv(os.path.join(DATA_DIR, 'Clothing_Shoes_and_Jewelry.csv'), sep=',',
-                       names=['user', 'item', 'rating', 'timestamp'])
+    df = pd.read_csv(os.path.join(DATA_DIR, 'CDs_and_Vinyl.csv'), sep=',',
+                       names=['item', 'user', 'rating', 'timestamp'])
+    return df[['user', 'item', 'rating', 'timestamp']]
 
 def load_amazon_games():
-    return pd.read_csv(os.path.join(DATA_DIR, 'Video_Games.csv'), sep=',',
-                       names=['user', 'item', 'rating', 'timestamp'])
+    df = pd.read_csv(os.path.join(DATA_DIR, 'Video_Games.csv'), sep=',',
+                       names=['item', 'user', 'rating', 'timestamp'])
+    return df[['user', 'item', 'rating', 'timestamp']]
 
 
 def binarize(dataset, threshold):
@@ -93,7 +68,7 @@ def kcore_filter(dataset, kcore):
     return dataset.reset_index(drop=True)
 
 def encode_ids(dataset):
-    dataset = dataset.sort_values(by=['user', 'timestamp']).reset_index(drop=True)
+    dataset = dataset.sort_values(by=['user', 'timestamp'], kind='stable').reset_index(drop=True)
 
     unique_users = dataset['user'].unique()
     unique_items = dataset['item'].unique()
@@ -124,7 +99,7 @@ def split(dataset, fraction):
     test = []
 
     for user, group in dataset.groupby('user'):
-        group = group.sort_values(by=['timestamp'])
+        group = group.sort_values(by=['timestamp'], kind='stable')
 
         n_test = min(len(group) - 1, max(1, int(len(group) * fraction)))
 
@@ -211,21 +186,6 @@ DATASET_CONFIGS = {
                   'kcore': 5,
                   'split': 0.2,
                   },
-    'amazon_beauty': {'loader': load_amazon_beauty,
-                  'threshold': 0.0,
-                  'kcore': 5,
-                  'split': 0.2,
-                  },
-    'amazon_toys': {'loader': load_amazon_toys,
-                  'threshold': 0.0,
-                  'kcore': 5,
-                  'split': 0.2,
-                  },
-    'amazon_books': {'loader': load_amazon_books,
-                  'threshold': 0.0,
-                  'kcore': 5,
-                  'split': 0.2,
-                  },
     'amazon_music': {'loader': load_amazon_music,
                   'threshold': 0.0,
                   'kcore': 5,
@@ -236,26 +196,6 @@ DATASET_CONFIGS = {
                   'kcore': 5,
                   'split': 0.2,
                   },
-    'amazon_movies': {'loader': load_amazon_movies,
-                  'threshold': 0.0,
-                  'kcore': 5,
-                  'split': 0.2,
-                  },
-    'amazon_sports': {'loader': load_amazon_sports,
-                  'threshold': 0.0,
-                  'kcore': 5,
-                  'split': 0.2,
-                  },
-    'amazon_fashion': {'loader': load_amazon_fashion,
-                      'threshold': 0.0,
-                      'kcore': 5,
-                      'split': 0.2,
-                      },
-    'amazon_clothing': {'loader': load_amazon_clothing,
-                       'threshold': 0.0,
-                       'kcore': 5,
-                       'split': 0.2,
-                       },
     'amazon_games': {'loader': load_amazon_games,
                         'threshold': 0.0,
                         'kcore': 5,
