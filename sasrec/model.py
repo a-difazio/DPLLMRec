@@ -174,7 +174,7 @@ class SASRec(torch.nn.Module):
 
             # Penalità anti-repetition soft
             # applico una penalità sui logits, proporzionale a quante volte è già stato generato un item
-            if not no_repeat and penalty is not None:
+            if not no_repeat and penalty is not None and penalty > 1.0:
                 # logits -= penalty * counts.float()
                 repeated = counts > 0
                 positive = logits > 0
