@@ -36,7 +36,7 @@ def parser():
     parser.add_argument('--temperature', default=1.0, type=float)
     parser.add_argument('--top_p', default=None, type=float)
     parser.add_argument('--top_k', default=None, type=int)
-    parser.add_argument('--penalty', default=0.0, type=float)
+    parser.add_argument('--penalty', default=None, type=float)
     parser.add_argument('--no_repeat', action='store_true', default=False)
     parser.add_argument('--context_len', default=None, type=int)
     parser.add_argument('--include_context', action='store_true', default=False)
