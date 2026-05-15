@@ -8,7 +8,7 @@ PENALTIES=(1.0 1.05 1.1 1.2 1.3)
 
 for PENALTY in "${PENALTIES[@]}"
 do
-    GEN_NAME="temp1.0_topp0.5_topknone_pen${PENALTY}"
+    GEN_NAME="temp1.0_topp1.0_topknone_pen${PENALTY}"
 
     echo "Running $GEN_NAME"
 
@@ -21,7 +21,7 @@ do
         --temperature 1.0 \
         --penalty $PENALTY \
         --seed 42 \
-        --top_p 0.5
+        --top_p 1.0
 
     echo "=== Done $GEN_NAME ==="
 done
