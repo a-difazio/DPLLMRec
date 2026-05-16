@@ -10,9 +10,9 @@ fi
 
 echo "Running GRID on dataset: $DATASET | GPU: $GPU"
 
-TOP_PS=(0.2 0.4 0.6 0.8 1)
+TOP_PS=(0.2 0.4 0.6 0.8 1.0)
 TEMPERATURES=(1.0 0.9 0.85 1.15 0.7)
-PENALTIES=(1.05 1.1 1.2 1.3)
+PENALTIES=(1.0 1.05 1.1 1.2 1.3)
 
 for TEMP in "${TEMPERATURES[@]}"; do
   for TOP_P in "${TOP_PS[@]}"; do
